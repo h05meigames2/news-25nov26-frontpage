@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""Entrypoint for the make.fun news-image-20261125 bounty entry.
+"""Copy the pre-rendered front page into the make.fun output folder.
 
-Copies the rendered front page (entry.png, produced by gen_image.py)
-into the make.fun output directory as entry.png.
-
-Usage:
-    python3 gen_image.py   # render entry.png first
-    python3 main.py        # copy it to $MAKEFUN_OUTPUT_DIR/entry.png
-
-Stdlib only. Deterministic: the output is a byte-for-byte copy of the
-input image, so repeated runs produce identical bytes.
+Stdlib only. The image itself is produced by gen_image.py; this script
+just places a copy where the platform expects it.
 """
 
 import os
@@ -17,26 +10,28 @@ import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SOURCE = os.path.join(HERE, "entry.png")
+SOURCE_NAME = "entry.png"
+DEFAULT_DEST = "/output"
+
+
+def resolve_destination():
+    chosen = os.environ.get("MAKEFUN_OUTPUT_DIR") or DEFAULT_DEST
+    return os.path.join(chosen, SOURCE_NAME)
 
 
 def main():
-    # Env var may name a directory or the full output file path.
-    out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output/entry.png"
-    if not os.path.isfile(SOURCE):
-        print("entry.png not found; run 'python3 gen_image.py' first.",
-              file=sys.stderr)
+    source = os.path.join(HERE, SOURCE_NAME)
+    if not os.path.isfile(source):
+        print("missing source image: " + source, file=sys.stderr)
+        print("run: python3 gen_image.py", file=sys.stderr)
         return 1
-    if out_dir.endswith(".png"):
-        dest = out_dir
-        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
-    else:
-        os.makedirs(out_dir, exist_ok=True)
-        dest = os.path.join(out_dir, "entry.png")
-    shutil.copyfile(SOURCE, dest)
-    print("wrote", dest, os.path.getsize(dest), "bytes")
+    target = resolve_destination()
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    shutil.copyfile(source, target)
+    size = os.path.getsize(target)
+    print("copied " + source + " -> " + target + " (" + str(size) + " bytes)")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
